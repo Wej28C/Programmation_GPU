@@ -1,5 +1,4 @@
-
-INC	:= -I$(CUDA_HOME)/include -I. -I../headers
+INC	:= -I$(CUDA_HOME)/include -I. -I../headers -I$(CUDA_HOME)/samples/common/inc
 LIB	:= -L$(CUDA_HOME)/lib64 -lcudart
 
 NVCCFLAGS	:= -lineinfo -arch=sm_70 --ptxas-options=-v --use_fast_math

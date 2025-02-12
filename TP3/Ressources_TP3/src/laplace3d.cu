@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <helper_cuda.h>
+#include "helper_cuda.h"
 
 ////////////////////////////////////////////////////////////////////////
 // define kernel block size
@@ -66,7 +66,7 @@ __global__ void GPU_laplace3d(int NX, int NY, int NZ,
 // declare Gold routine
 ////////////////////////////////////////////////////////////////////////
 
-void Gold_laplace3d(int NX, int NY, int NZ, float* h_u1, float* h_u2);
+//void Gold_laplace3d(int NX, int NY, int NZ, float* h_u1, float* h_u2);
 
 ////////////////////////////////////////////////////////////////////////
 // Main program
@@ -74,9 +74,9 @@ void Gold_laplace3d(int NX, int NY, int NZ, float* h_u1, float* h_u2);
 
 int main(int argc, const char **argv){
 
-  int       NX=512, NY=512, NZ=512,
+  int       NX=1024, NY=1024, NZ=1024,
             REPEAT=20, bx, by, i, j, k;
-  float    *h_u1, *h_u2, *h_foo,
+  float    *h_u1, *h_u2, /**h_foo,*/
            *d_u1, *d_u2, *d_foo;
   
   size_t    ind, bytes = sizeof(float) * NX*NY*NZ;
@@ -127,7 +127,7 @@ int main(int argc, const char **argv){
   printf("Copy u1 to device: %.1f (ms) \n\n", milli);
 
   // Gold treatment
-
+/*
   cudaEventRecord(start);
   for (i=0; i<REPEAT; i++) {
     Gold_laplace3d(NX, NY, NZ, h_u1, h_u2);
@@ -138,7 +138,8 @@ int main(int argc, const char **argv){
   cudaEventSynchronize(stop);
   cudaEventElapsedTime(&milli, start, stop);
   printf("%dx Gold_laplace3d: %.1f (ms) \n\n", REPEAT, milli);
-  
+  */
+
   // Set up the execution configuration
 
   bx = 1 + (NX-1)/BLOCK_X;

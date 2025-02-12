@@ -1,0 +1,129 @@
+1) Compile and run Laplace3d: 
+Grid dimensions: 512 x 512 x 512 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 40.9 (ms) 
+
+20x Gold_laplace3d: 15405.7 (ms) 
+
+20x GPU_laplace3d: 62.3 (ms) 
+
+Copy u2 to host: 42.7 (ms) 
+
+rms error = 0.000000 
+
+- Après chaque itération, les pointeurs sont échangés pour éviter de recopier les résultats.
+- Les offsets permettent d’accéder aux voisins :
+    --IOFF : Déplacement en x (voisins gauche/droite).
+    --JOFF : Déplacement en y (voisins haut/bas).
+    --KOFF : Déplacement en z (voisins avant/arrière).
+-Après chaque itération, les pointeurs sont échangés pour éviter de recopier les résultats et ainsi l'allocation mémoire à chaque fois.
+
+2) Résultat d'execution après modifications: 
+    Grid dimensions: 1024 x 1024 x 1024 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 317.8 (ms) 
+
+20x GPU_laplace3d: 150.2 (ms) 
+
+Copy u2 to host: 598.6 (ms) 
+
+rms error = 0.066320 
+
+Nous remarquons que le temps a augmenté de manière significative par rapport à la version 512³.
+Le temps des copies host-device a aussi augmenté. 
+
+4) 
+BLOCK_X, BLOCK_Y = 8 
+Grid dimensions: 1024 x 1024 x 1024 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 739.3 (ms) 
+
+20x GPU_laplace3d: 311.7 (ms) 
+
+Copy u2 to host: 1382.1 (ms) 
+
+rms error = 0.066320 
+
+BLOCK_X, BLOCK_Y = 32 
+Grid dimensions: 1024 x 1024 x 1024 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 733.5 (ms) 
+
+20x GPU_laplace3d: 173.8 (ms) 
+
+Copy u2 to host: 1260.1 (ms) 
+
+rms error = 0.066320 
+
+BLOCK_X =16 BLOCK_Y=8 
+Grid dimensions: 1024 x 1024 x 1024 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 958.4 (ms) 
+
+20x GPU_laplace3d: 176.5 (ms) 
+
+Copy u2 to host: 1251.8 (ms) 
+
+rms error = 0.066320 
+
+BLOCK_X =16 BLOCK_Y=32
+
+Grid dimensions: 1024 x 1024 x 1024 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 956.4 (ms) 
+
+20x GPU_laplace3d: 189.0 (ms) 
+
+Copy u2 to host: 1239.4 (ms) 
+
+rms error = 0.066320 
+=> 
+        a) La configuration BLOCK_X = 32, BLOCK_Y = 32 obtient le meilleur temps d’exécution pour le kernel (173.8 ms sur 20 itérations).
+        Cela s’explique par le fait qu’un bloc de 32×32 threads permet une meilleure coalescence des accès mémoire et réduit le nombre total de blocs lancés, ce qui diminue les surcoûts de lancement.
+        b) BLOCK_X = 16, BLOCK_Y = 8 donne un temps de 176.5 ms, très proche du meilleur résultat, ce qui montre qu’un bon compromis est possible.
+        c) BLOCK_X = 16, BLOCK_Y = 32 est légèrement moins performant (189.0 ms), suggérant qu’un déséquilibre dans les dimensions peut impacter négativement la performance.
+        d) BLOCK_X = 8, BLOCK_Y = 8 Le temps de 311.7 ms montre clairement que des blocs trop petits sont inefficaces en raison du nombre élevé de blocs et d’un moindre degré d’optimisation des accès mémoire.
+        e) Les temps de copie dépendent du volume total de données et du comportement du pilote.
+        Ils sont donc moins influencés par la taille des blocs dans le kernel. 
+        Les variations constatées (par exemple, 733.5 ms vs. 958.4 ms pour le transfert d'entrée) peuvent être dues à des fluctuations du système ou à la manière dont le lancement du kernel et les transferts sont intercalés.
+
+5) 
+Grid dimensions: 512 x 512 x 512 
+
+GPU Device 0: "Ampere" with compute capability 8.0
+
+Copy u1 to device: 41.5 (ms) 
+
+20x Gold_laplace3d: 16348.9 (ms) 
+
+20x GPU_laplace3d_new: 50.1 (ms) 
+
+Copy u2 to host: 44.0 (ms) 
+
+rms error = 0.000000 
+=> performance de Laplace3d_new plus importante que la verson normale. 
+Cela est due au traitement direct d'un point de la grille 3D par chaque thread.
+
+6) Option de profiling ncu  n'est pas permise sur juliette 
+" 
+==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0."
+
+7) 
+Chaque thread lit son propre élément et, dans le cas des points intérieurs, il effectue 6 lectures (pour les 6 voisins).
+Si le cache fonctionne bien, chaque élément de la grille sera lu une seule fois depuis la mémoire globale, puis réutilisé par les threads voisins.
+Chaque thread écrit exactement 1 valeur (4 octets) dans la grille de sortie.
+Pour une grille de dimensions 1024 × 1024 × 1024, le nombre total de points est 1024^3.
+Le volume total de données transférées par itération est donc : 1024^3 *nombre d'octet par lecture et nombre d'octet pour ecriture.
+La bande passante effective est  estimée par : les données tranférées par itération / Temps par itération (GPU_laplace3d_new/20) 

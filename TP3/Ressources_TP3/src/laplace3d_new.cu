@@ -7,7 +7,7 @@
 #include <string.h>
 #include <math.h>
 
-#include <helper_cuda.h>
+#include "helper_cuda.h"
 
 ////////////////////////////////////////////////////////////////////////
 // define kernel block size
